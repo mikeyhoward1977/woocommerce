@@ -42,8 +42,13 @@ module.exports = function( grunt ) {
 		// Minify .js files.
 		uglify: {
 			options: {
-				// Preserve comments that start with a bang.
-				preserveComments: /^!/
+				ie8: true,
+				parse: {
+					strict: false
+				},
+				output: {
+					comments : /@license|@preserve|^!/
+				}
 			},
 			admin: {
 				files: [{
@@ -80,7 +85,6 @@ module.exports = function( grunt ) {
 					'<%= dirs.js %>/photoswipe/photoswipe.min.js': ['<%= dirs.js %>/photoswipe/photoswipe.js'],
 					'<%= dirs.js %>/photoswipe/photoswipe-ui-default.min.js': ['<%= dirs.js %>/photoswipe/photoswipe-ui-default.js'],
 					'<%= dirs.js %>/round/round.min.js': ['<%= dirs.js %>/round/round.js'],
-					'<%= dirs.js %>/select2/select2.min.js': ['<%= dirs.js %>/select2/select2.js'],
 					'<%= dirs.js %>/stupidtable/stupidtable.min.js': ['<%= dirs.js %>/stupidtable/stupidtable.js'],
 					'<%= dirs.js %>/zeroclipboard/jquery.zeroclipboard.min.js': ['<%= dirs.js %>/zeroclipboard/jquery.zeroclipboard.js']
 				}
@@ -115,8 +119,7 @@ module.exports = function( grunt ) {
 		sass: {
 			compile: {
 				options: {
-					sourcemap: 'none',
-					loadPath: require( 'node-bourbon' ).includePaths
+					sourceMap: 'none'
 				},
 				files: [{
 					expand: true,
@@ -125,6 +128,21 @@ module.exports = function( grunt ) {
 					dest: '<%= dirs.css %>/',
 					ext: '.css'
 				}]
+			}
+		},
+
+		// Generate RTL .css files
+		rtlcss: {
+			woocommerce: {
+				expand: true,
+				cwd: '<%= dirs.css %>',
+				src: [
+					'*.css',
+					'!select2.css',
+					'!*-rtl.css'
+				],
+				dest: '<%= dirs.css %>/',
+				ext: '-rtl.css'
 			}
 		},
 
@@ -139,11 +157,21 @@ module.exports = function( grunt ) {
 			}
 		},
 
+		// Concatenate select2.css onto the admin.css files.
+		concat: {
+			admin: {
+				files: {
+					'<%= dirs.css %>/admin.css' : ['<%= dirs.css %>/select2.css', '<%= dirs.css %>/admin.css'],
+					'<%= dirs.css %>/admin-rtl.css' : ['<%= dirs.css %>/select2.css', '<%= dirs.css %>/admin-rtl.css']
+				}
+			}
+		},
+
 		// Watch changes for assets.
 		watch: {
 			css: {
 				files: ['<%= dirs.css %>/*.scss'],
-				tasks: ['sass', 'cssmin']
+				tasks: ['sass', 'rtlcss', 'cssmin', 'concat']
 			},
 			js: {
 				files: [
@@ -224,6 +252,12 @@ module.exports = function( grunt ) {
 					'cd apigen',
 					'php hook-docs.php'
 				].join( '&&' )
+			},
+			e2e_test: {
+				command: 'npm run --silent test:single tests/e2e-tests/' + grunt.option( 'file' )
+			},
+			e2e_tests: {
+				command: 'npm run --silent test'
 			}
 		},
 
@@ -238,9 +272,11 @@ module.exports = function( grunt ) {
 		phpcs: {
 			options: {
 				bin: 'vendor/bin/phpcs',
-				standard: './phpcs.ruleset.xml'
 			},
 			dist: {
+				options: {
+					standard: './phpcs.ruleset.xml'
+				},
 				src:  [
 					'**/*.php',                                                  // Include all files
 					'!apigen/**',                                                // Exclude apigen/
@@ -253,21 +289,44 @@ module.exports = function( grunt ) {
 					'!vendor/**'                                                 // Exclude vendor/
 				]
 			}
+		},
+
+		// Autoprefixer.
+		postcss: {
+			options: {
+				processors: [
+					require( 'autoprefixer' )({
+						browsers: [
+							'> 0.1%',
+							'ie 8',
+							'ie 9'
+						]
+					})
+				]
+			},
+			dist: {
+				src: [
+					'<%= dirs.css %>/*.css'
+				]
+			}
 		}
 	});
 
 	// Load NPM tasks to be used here
+	grunt.loadNpmTasks( 'grunt-sass' );
 	grunt.loadNpmTasks( 'grunt-shell' );
+	grunt.loadNpmTasks( 'grunt-phpcs' );
+	grunt.loadNpmTasks( 'grunt-rtlcss' );
+	grunt.loadNpmTasks( 'grunt-postcss' );
+	grunt.loadNpmTasks( 'grunt-stylelint' );
 	grunt.loadNpmTasks( 'grunt-wp-i18n' );
 	grunt.loadNpmTasks( 'grunt-checktextdomain' );
 	grunt.loadNpmTasks( 'grunt-contrib-jshint' );
 	grunt.loadNpmTasks( 'grunt-contrib-uglify' );
-	grunt.loadNpmTasks( 'grunt-contrib-sass' );
 	grunt.loadNpmTasks( 'grunt-contrib-cssmin' );
+	grunt.loadNpmTasks( 'grunt-contrib-concat' );
 	grunt.loadNpmTasks( 'grunt-contrib-watch' );
 	grunt.loadNpmTasks( 'grunt-contrib-clean' );
-	grunt.loadNpmTasks( 'grunt-stylelint' );
-	grunt.loadNpmTasks( 'grunt-phpcs' );
 
 	// Register tasks
 	grunt.registerTask( 'default', [
@@ -284,7 +343,10 @@ module.exports = function( grunt ) {
 
 	grunt.registerTask( 'css', [
 		'sass',
-		'cssmin'
+		'rtlcss',
+		'postcss',
+		'cssmin',
+		'concat'
 	]);
 
 	grunt.registerTask( 'docs', [
@@ -295,5 +357,13 @@ module.exports = function( grunt ) {
 	grunt.registerTask( 'dev', [
 		'default',
 		'makepot'
+	]);
+
+	grunt.registerTask( 'e2e-tests', [
+		'shell:e2e_tests'
+	]);
+
+	grunt.registerTask( 'e2e-test', [
+		'shell:e2e_test'
 	]);
 };

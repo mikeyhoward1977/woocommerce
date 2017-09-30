@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The WooCommerce product factory creating the right product object.
  *
  * @class 		WC_Product_Factory
- * @version		2.7.0
+ * @version		3.0.0
  * @package		WooCommerce/Classes
  * @category	Class
  * @author 		WooThemes
@@ -33,7 +33,7 @@ class WC_Product_Factory {
 
 		// Backwards compatibility.
 		if ( ! empty( $deprecated ) ) {
-			wc_deprecated_argument( 'args', '2.7', 'Passing args to the product factory is deprecated. If you need to force a type, construct the product class directly.' );
+			wc_deprecated_argument( 'args', '3.0', 'Passing args to the product factory is deprecated. If you need to force a type, construct the product class directly.' );
 
 			if ( isset( $deprecated['product_type'] ) ) {
 				$product_type = $this->get_classname_from_product_type( $deprecated['product_type'] );
@@ -43,15 +43,7 @@ class WC_Product_Factory {
 		$classname = $this->get_product_classname( $product_id, $product_type );
 
 		try {
-			// Try to get from cache, otherwise create a new object,
-			$product = wp_cache_get( 'product-' . $product_id, 'products' );
-
-			if ( ! is_a( $product, 'WC_Product' ) ) {
-				$product = new $classname( $product_id, $deprecated );
-				wp_cache_set( 'product-' . $product_id, $product, 'products' );
-			}
-
-			return $product;
+			return new $classname( $product_id, $deprecated );
 		} catch ( Exception $e ) {
 			return false;
 		}
@@ -60,7 +52,7 @@ class WC_Product_Factory {
 	/**
 	 * Gets a product classname and allows filtering. Returns WC_Product_Simple if the class does not exist.
 	 *
-	 * @since  2.7.0
+	 * @since  3.0.0
 	 * @param  int    $product_id
 	 * @param  string $product_type
 	 * @return string
@@ -78,7 +70,7 @@ class WC_Product_Factory {
 	/**
 	 * Get the product type for a product.
 	 *
-	 * @since 2.7.0
+	 * @since 3.0.0
 	 * @param  int $product_id
 	 * @return string|false
 	 */
@@ -86,16 +78,7 @@ class WC_Product_Factory {
 		// Allow the overriding of the lookup in this function. Return the product type here.
 		$override = apply_filters( 'woocommerce_product_type_query', false, $product_id );
 		if ( ! $override ) {
-			$post_type = get_post_type( $product_id );
-
-			if ( 'product_variation' === $post_type ) {
-				return 'variation';
-			} elseif ( 'product' === $post_type ) {
-				$terms = get_the_terms( $product_id, 'product_type' );
-				return ! empty( $terms ) ? sanitize_title( current( $terms )->name ) : 'simple';
-			} else {
-				return false;
-			}
+			return WC_Data_Store::load( 'product' )->get_product_type( $product_id );
 		} else {
 			return $override;
 		}
@@ -114,12 +97,14 @@ class WC_Product_Factory {
 	/**
 	 * Get the product ID depending on what was passed.
 	 *
-	 * @since 2.7.0
+	 * @since 3.0.0
 	 * @param  mixed $product
 	 * @return int|bool false on failure
 	 */
 	private function get_product_id( $product ) {
-		if ( is_numeric( $product ) ) {
+		if ( false === $product && isset( $GLOBALS['post'], $GLOBALS['post']->ID ) && 'product' === get_post_type( $GLOBALS['post']->ID ) ) {
+			return $GLOBALS['post']->ID;
+		} elseif ( is_numeric( $product ) ) {
 			return $product;
 		} elseif ( $product instanceof WC_Product ) {
 			return $product->get_id();

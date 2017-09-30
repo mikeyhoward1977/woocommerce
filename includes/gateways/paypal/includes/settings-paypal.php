@@ -26,7 +26,7 @@ return array(
 		'type'        => 'text',
 		'desc_tip'    => true,
 		'description' => __( 'This controls the description which the user sees during checkout.', 'woocommerce' ),
-		'default'     => __( 'Pay via PayPal; you can pay with your credit card if you don\'t have a PayPal account.', 'woocommerce' ),
+		'default'     => __( "Pay via PayPal; you can pay with your credit card if you don't have a PayPal account.", 'woocommerce' ),
 	),
 	'email' => array(
 		'title'       => __( 'PayPal email', 'woocommerce' ),
@@ -48,7 +48,7 @@ return array(
 		'type'        => 'checkbox',
 		'label'       => __( 'Enable logging', 'woocommerce' ),
 		'default'     => 'no',
-		'description' => sprintf( __( 'Log PayPal events, such as IPN requests, inside %s', 'woocommerce' ), '<code>' . wc_get_log_file_path( 'paypal' ) . '</code>' ),
+		'description' => sprintf( __( 'Log PayPal events, such as IPN requests, inside %s', 'woocommerce' ), '<code>' . WC_Log_Handler_File::get_log_file_path( 'paypal' ) . '</code>' ),
 	),
 	'advanced' => array(
 		'title'       => __( 'Advanced options', 'woocommerce' ),

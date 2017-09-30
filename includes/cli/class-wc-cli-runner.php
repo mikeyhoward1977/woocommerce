@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 /**
  * WC API to WC CLI Bridge.
  *
@@ -8,20 +13,20 @@
  * Forked from wp-cli/restful (by Daniel Bachhuber, released under the MIT license https://opensource.org/licenses/MIT).
  * https://github.com/wp-cli/restful
  *
- * @version 2.7.0
+ * @version 3.0.0
  * @package WooCommerce
  */
 class WC_CLI_Runner {
 	/**
-	 * Endpoints to disable (meaning they will not be avaiable as CLI commands).
+	 * Endpoints to disable (meaning they will not be available as CLI commands).
 	 * Some of these can either be done via WP already, or are offered with
 	 * some other changes (like tools).
 	 */
 	private static $disabled_endpoints = array(
 		'settings',
-		'settings/(?P<group>[\w-]+)',
-		'settings/(?P<group>[\w-]+)/batch',
-		'settings/(?P<group>[\w-]+)/(?P<id>[\w-]+)',
+		'settings/(?P<group_id>[\w-]+)',
+		'settings/(?P<group_id>[\w-]+)/batch',
+		'settings/(?P<group_id>[\w-]+)/(?P<id>[\w-]+)',
 		'system_status',
 		'system_status/tools',
 		'system_status/tools/(?P<id>[\w-]+)',
@@ -29,6 +34,12 @@ class WC_CLI_Runner {
 		'reports/sales',
 		'reports/top_sellers',
 	);
+
+	/**
+	 * The version of the REST API we should target to
+	 * generate commands.
+	 */
+	private static $target_rest_version = 'v2';
 
 	/**
 	 * Register's all endpoints as commands once WP and WC have all loaded.
@@ -48,10 +59,11 @@ class WC_CLI_Runner {
 
 		// Loop through all of our endpoints and register any valid WC endpoints.
 		foreach ( $response_data['routes'] as $route => $route_data ) {
-			// Only register WC endpoints
-			if ( substr( $route, 0, 4 ) !== '/wc/' ) {
+			// Only register endpoints for WC and our target version.
+			if ( substr( $route, 0, 4 + strlen( self::$target_rest_version ) ) !== '/wc/' . self::$target_rest_version ) {
 				continue;
 			}
+
 			// Only register endpoints with schemas
 			if ( empty( $route_data['schema']['title'] ) ) {
 				WP_CLI::debug( sprintf( __( 'No schema title found for %s, skipping REST command registration.', 'woocommerce' ), $route ), 'wc' );
@@ -74,7 +86,7 @@ class WC_CLI_Runner {
 
 	/**
 	 * Generates command information and tells WP CLI about all
-	 * commands avaiable from a route.
+	 * commands available from a route.
 	 *
 	 * @param string $rest_command
 	 * @param string $route
@@ -82,20 +94,29 @@ class WC_CLI_Runner {
 	 * @param array  $command_args
 	 */
 	private static function register_route_commands( $rest_command, $route, $route_data, $command_args = array() ) {
+		// Define IDs that we are looking for in the routes (in addition to id)
+		// so that we can pass it to the rest command, and use it here to generate documentation.
+		$supported_ids = array(
+				'id'           => __( 'ID.', 'woocommerce' ),
+				'product_id'   => __( 'Product ID.', 'woocommerce' ),
+				'customer_id'  => __( 'Customer ID.', 'woocommerce' ),
+				'order_id'     => __( 'Order ID.', 'woocommerce' ),
+				'refund_id'    => __( 'Refund ID.', 'woocommerce' ),
+				'attribute_id' => __( 'Attribute ID.', 'woocommerce' ),
+				'zone_id'      => __( 'Zone ID.', 'woocommerce' ),
+		);
+		$rest_command->set_supported_ids( $supported_ids );
+		$positional_args = array_keys( $supported_ids );
+
 		$parent			 = "wc {$route_data['schema']['title']}";
 		$supported_commands = array();
 
 		// Get a list of supported commands for each route.
 		foreach ( $route_data['endpoints'] as $endpoint ) {
-			$parsed_args   = preg_match_all( '#\([^\)]+\)#', $route, $matches );
-			$first_match   = $matches[0];
+			preg_match_all( '#\([^\)]+\)#', $route, $matches );
 			$resource_id   = ! empty( $matches[0] ) ? array_pop( $matches[0] ) : null;
 			$trimmed_route = rtrim( $route );
 			$is_singular   = substr( $trimmed_route, - strlen( $resource_id ) ) === $resource_id;
-			if ( ! $is_singular ) {
-				$resource_id = $first_match;
-			}
-			$command = '';
 
 			// List a collection
 			if ( array( 'GET' ) == $endpoint['methods'] && ! $is_singular ) {
@@ -122,40 +143,20 @@ class WC_CLI_Runner {
 		foreach ( $supported_commands as $command => $endpoint_args ) {
 			$synopsis = array();
 			$arg_regs = array();
+			$ids      = array();
 
-			if ( strpos( $route, '<product_id>' ) !== false ) {
-				$synopsis[] = array(
-					'name'		  => 'product_id',
-					'type'		  => 'positional',
-					'description' => __( 'Product ID.', 'woocommerce' ),
-				);
+			foreach ( $supported_ids as $id_name => $id_desc ) {
+				if ( strpos( $route, '<' . $id_name . '>' ) !== false ) {
+					$synopsis[] = array(
+						'name'        => $id_name,
+						'type'        => 'positional',
+						'description' => $id_desc,
+						'optional'    => false,
+					);
+					$ids[] = $id_name;
+				}
 			}
-
-			if ( strpos( $route, '<customer_id>' ) !== false ) {
-				$synopsis[] = array(
-					'name'		  => 'customer_id',
-					'type'		  => 'positional',
-					'description' => __( 'Customer ID.', 'woocommerce' ),
-				);
-			}
-
-			if ( strpos( $route, '<order_id>' ) !== false ) {
-				$synopsis[] = array(
-					'name'		  => 'order_id',
-					'type'		  => 'positional',
-					'description' => __( 'Order ID.', 'woocommerce' ),
-				);
-			}
-
-			if ( strpos( $route, '<refund_id>' ) !== false ) {
-				$synopsis[] = array(
-					'name'		  => 'refund_id',
-					'type'		  => 'positional',
-					'description' => __( 'Refund ID.', 'woocommerce' ),
-				);
-			}
-
-			if ( in_array( $command, array( 'delete', 'get', 'update' ) ) ) {
+			if ( in_array( $command, array( 'delete', 'get', 'update' ) ) && ! in_array( 'id', $ids )  ) {
 				$synopsis[] = array(
 					'name'		  => 'id',
 					'type'		  => 'positional',
@@ -165,12 +166,14 @@ class WC_CLI_Runner {
 			}
 
 			foreach ( $endpoint_args as $name => $args ) {
-				$arg_regs[] = array(
-					'name'		  => $name,
-					'type'		  => 'assoc',
-					'description' => ! empty( $args['description'] ) ? $args['description'] : '',
-					'optional'	  => empty( $args['required'] ) ? true : false,
-				);
+				if ( ! in_array( $name, $positional_args ) || strpos( $route, '<' . $id_name . '>' ) === false ) {
+					$arg_regs[] = array(
+						'name'		  => $name,
+						'type'		  => 'assoc',
+						'description' => ! empty( $args['description'] ) ? $args['description'] : '',
+						'optional'	  => empty( $args['required'] ) ? true : false,
+					);
+				}
 			}
 
 			foreach ( $arg_regs as $arg_reg ) {
@@ -230,9 +233,7 @@ class WC_CLI_Runner {
 			$before_invoke = null;
 			if ( empty( $command_args['when'] ) && \WP_CLI::get_config( 'debug' ) ) {
 				$before_invoke = function() {
-					if ( ! defined( 'SAVEQUERIES' ) ) {
-						define( 'SAVEQUERIES', true );
-					}
+					wc_maybe_define_constant( 'SAVEQUERIES', true );
 				};
 			}
 

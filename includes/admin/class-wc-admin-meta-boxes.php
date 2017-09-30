@@ -91,7 +91,7 @@ class WC_Admin_Meta_Boxes {
 	 * Show any stored error messages.
 	 */
 	public function output_errors() {
-		$errors = maybe_unserialize( get_option( 'woocommerce_meta_box_errors' ) );
+		$errors = array_filter( (array) get_option( 'woocommerce_meta_box_errors' ) );
 
 		if ( ! empty( $errors ) ) {
 
@@ -143,15 +143,8 @@ class WC_Admin_Meta_Boxes {
 	 * Remove bloat.
 	 */
 	public function remove_meta_boxes() {
-		global $post;
-
 		remove_meta_box( 'postexcerpt', 'product', 'normal' );
 		remove_meta_box( 'product_shipping_classdiv', 'product', 'side' );
-
-		if ( 'product' === $post->post_type && 0 === count( get_page_templates( $post ) ) ) {
-			remove_meta_box( 'pageparentdiv', 'product', 'side' );
-		}
-
 		remove_meta_box( 'commentsdiv', 'product', 'normal' );
 		remove_meta_box( 'commentstatusdiv', 'product', 'side' );
 		remove_meta_box( 'commentstatusdiv', 'product', 'normal' );
@@ -175,9 +168,8 @@ class WC_Admin_Meta_Boxes {
 		global $post;
 
 		// Comments/Reviews
-		if ( isset( $post ) && ( 'publish' == $post->post_status || 'private' == $post->post_status ) ) {
+		if ( isset( $post ) && ( 'publish' == $post->post_status || 'private' == $post->post_status ) && post_type_supports( 'product', 'comments' ) ) {
 			remove_meta_box( 'commentsdiv', 'product', 'normal' );
-
 			add_meta_box( 'commentsdiv', __( 'Reviews', 'woocommerce' ), 'post_comment_meta_box', 'product', 'normal' );
 		}
 	}
@@ -195,7 +187,7 @@ class WC_Admin_Meta_Boxes {
 		}
 
 		// Dont' save meta boxes for revisions or autosaves
-		if ( defined( 'DOING_AUTOSAVE' ) || is_int( wp_is_post_revision( $post ) ) || is_int( wp_is_post_autosave( $post ) ) ) {
+		if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || is_int( wp_is_post_revision( $post ) ) || is_int( wp_is_post_autosave( $post ) ) ) {
 			return;
 		}
 

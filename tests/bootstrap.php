@@ -69,17 +69,22 @@ class WC_Unit_Tests_Bootstrap {
 	 */
 	public function install_wc() {
 
-		// clean existing install first
+		// Clean existing install first.
 		define( 'WP_UNINSTALL_PLUGIN', true );
 		define( 'WC_REMOVE_ALL_DATA', true );
 		include( $this->plugin_dir . '/uninstall.php' );
 
 		WC_Install::install();
 
-		// reload capabilities after install, see https://core.trac.wordpress.org/ticket/28374
-		$GLOBALS['wp_roles']->reinit();
+		// Reload capabilities after install, see https://core.trac.wordpress.org/ticket/28374
+		if ( version_compare( $GLOBALS['wp_version'], '4.7', '<' ) ) {
+			$GLOBALS['wp_roles']->reinit();
+		} else {
+			$GLOBALS['wp_roles'] = null;
+			wp_roles();
+		}
 
-		echo "Installing WooCommerce..." . PHP_EOL;
+		echo 'Installing WooCommerce...' . PHP_EOL;
 	}
 
 	/**
@@ -97,6 +102,7 @@ class WC_Unit_Tests_Bootstrap {
 		require_once( $this->tests_dir . '/framework/class-wc-unit-test-factory.php' );
 		require_once( $this->tests_dir . '/framework/class-wc-mock-session-handler.php' );
 		require_once( $this->tests_dir . '/framework/class-wc-mock-wc-data.php' );
+		require_once( $this->tests_dir . '/framework/class-wc-mock-wc-object-query.php' );
 		require_once( $this->tests_dir . '/framework/class-wc-payment-token-stub.php' );
 		require_once( $this->tests_dir . '/framework/vendor/class-wp-test-spy-rest-server.php' );
 

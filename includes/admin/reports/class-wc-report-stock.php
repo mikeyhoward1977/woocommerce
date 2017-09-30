@@ -31,8 +31,8 @@ class WC_Report_Stock extends WP_List_Table {
 	public function __construct() {
 
 		parent::__construct( array(
-			'singular'  => __( 'Stock', 'woocommerce' ),
-			'plural'    => __( 'Stock', 'woocommerce' ),
+			'singular'  => 'stock',
+			'plural'    => 'stock',
 			'ajax'      => false,
 		) );
 	}
@@ -80,6 +80,10 @@ class WC_Report_Stock extends WP_List_Table {
 			$product = wc_get_product( $item->id );
 		}
 
+		if ( ! $product ) {
+			return;
+		}
+
 		switch ( $column_name ) {
 
 			case 'product' :
@@ -91,13 +95,13 @@ class WC_Report_Stock extends WP_List_Table {
 
 				// Get variation data.
 				if ( $product->is_type( 'variation' ) ) {
-					echo '<div class="description">' . wc_get_formatted_variation( $product, true ) . '</div>';
+					echo '<div class="description">' . wp_kses_post( wc_get_formatted_variation( $product, true ) ) . '</div>';
 				}
 			break;
 
 			case 'parent' :
 				if ( $item->parent ) {
-					echo get_the_title( $item->parent );
+					echo esc_html( get_the_title( $item->parent ) );
 				} else {
 					echo '-';
 				}

@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The WooCommerce order factory creating the right order objects.
  *
  * @class 		WC_Order_Factory
- * @version		2.7.0
+ * @version		3.0.0
  * @package		WooCommerce/Classes
  * @category	Class
  * @author 		WooCommerce
@@ -29,16 +29,15 @@ class WC_Order_Factory {
 			return false;
 		}
 
-		$post_type = get_post_type( $order_id );
-
-		if ( $order_type = wc_get_order_type( $post_type ) ) {
-			$classname = $order_type['class_name'];
+		$order_type = WC_Data_Store::load( 'order' )->get_order_type( $order_id );
+		if ( $order_type_data = wc_get_order_type( $order_type ) ) {
+			$classname = $order_type_data['class_name'];
 		} else {
 			$classname = false;
 		}
 
 		// Filter classname so that the class can be overridden if extended.
-		$classname = apply_filters( 'woocommerce_order_class', $classname, $post_type, $order_id );
+		$classname = apply_filters( 'woocommerce_order_class', $classname, $order_type, $order_id );
 
 		if ( ! class_exists( $classname ) ) {
 			return false;
@@ -57,11 +56,8 @@ class WC_Order_Factory {
 	 * @return WC_Order_Item|false if not found
 	 */
 	public static function get_order_item( $item_id = 0 ) {
-		global $wpdb;
-
 		if ( is_numeric( $item_id ) ) {
-			$item_data = $wpdb->get_row( $wpdb->prepare( "SELECT order_item_type FROM {$wpdb->prefix}woocommerce_order_items WHERE order_item_id = %d LIMIT 1;", $item_id ) );
-			$item_type = $item_data->order_item_type;
+			$item_type = WC_Data_Store::load( 'order-item' )->get_order_item_type( $item_id );
 			$id        = $item_id;
 		} elseif ( $item_id instanceof WC_Order_Item ) {
 			$item_type = $item_id->get_type();
@@ -70,7 +66,6 @@ class WC_Order_Factory {
 			$id        = $item_id->order_item_id;
 			$item_type = $item_id->order_item_type;
 		} else {
-			$item_data = false;
 			$item_type = false;
 			$id        = false;
 		}
@@ -95,7 +90,10 @@ class WC_Order_Factory {
 					$classname = 'WC_Order_Item_Tax';
 				break;
 			}
-			if ( $classname ) {
+
+			$classname = apply_filters( 'woocommerce_get_order_item_classname', $classname, $item_type, $id );
+
+			if ( $classname && class_exists( $classname ) ) {
 				try {
 					return new $classname( $id );
 				} catch ( Exception $e ) {
@@ -109,7 +107,7 @@ class WC_Order_Factory {
 	/**
 	 * Get the order ID depending on what was passed.
 	 *
-	 * @since 2.7.0
+	 * @since 3.0.0
 	 * @param  mixed $order
 	 * @return int|bool false on failure
 	 */

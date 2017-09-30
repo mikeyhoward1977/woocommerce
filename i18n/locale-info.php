@@ -1,4 +1,8 @@
 <?php
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 return array(
 	'AU' => array(
 		'currency_code'  => 'AUD',
@@ -254,6 +258,26 @@ return array(
 			),
 		),
 	),
+	'FI' => array(
+		'currency_code'  => 'EUR',
+		'currency_pos'   => 'right_space',
+		'thousand_sep'   => ' ',
+		'decimal_sep'    => ',',
+		'num_decimals'   => 2,
+		'weight_unit'    => 'kg',
+		'dimension_unit' => 'cm',
+		'tax_rates'      => array(
+			'' => array(
+				array(
+					'country'  => 'FI',
+					'state'    => '',
+					'rate'     => '24.0000',
+					'name'     => 'ALV',
+					'shipping' => true,
+				),
+			),
+		),
+	),
 	'FR' => array(
 		'currency_code'  => 'EUR',
 		'currency_pos'   => 'right',
@@ -416,9 +440,9 @@ return array(
 	),
 	'PL' => array(
 		'currency_code'  => 'PLN',
-		'currency_pos'   => 'right',
-		'thousand_sep'   => ',',
-		'decimal_sep'    => '.',
+		'currency_pos'   => 'right_space',
+		'thousand_sep'   => ' ',
+		'decimal_sep'    => ',',
 		'num_decimals'   => 2,
 		'weight_unit'    => 'kg',
 		'dimension_unit' => 'cm',
@@ -429,6 +453,26 @@ return array(
 					'state'    => '',
 					'rate'     => '23.0000',
 					'name'     => 'VAT',
+					'shipping' => true,
+				),
+			),
+		),
+	),
+	'RO' => array(
+		'currency_code'  => 'RON',
+		'currency_pos'   => 'right_space',
+		'thousand_sep'   => '.',
+		'decimal_sep'    => ',',
+		'num_decimals'   => 2,
+		'weight_unit'    => 'kg',
+		'dimension_unit' => 'cm',
+		'tax_rates'      => array(
+			'' => array(
+				array(
+					'country'  => 'RO',
+					'state'    => '',
+					'rate'     => '19.0000',
+					'name'     => 'TVA',
 					'shipping' => true,
 				),
 			),

@@ -63,7 +63,7 @@ class WC_Tests_Tax extends WC_Unit_Test_Case {
 
 		$tax_rates = WC_Tax::get_shipping_tax_rates();
 
-		$this->assertEquals( $tax_rates, array( $tax_rate_id => array( 'rate' => '20.0000', 'label' => 'VAT', 'shipping' => 'yes', 'compound' => 'no' ) ) );
+		$this->assertEquals( $tax_rates, array( $tax_rate_id => array( 'rate' => '20.0000', 'label' => 'VAT', 'shipping' => 'yes', 'compound' => 'no' ) ), print_r( $tax_rates, true ) );
 
 		WC_Tax::_delete_tax_rate( $tax_rate_id );
 	}
@@ -442,8 +442,10 @@ class WC_Tests_Tax extends WC_Unit_Test_Case {
 	 */
 	public function test_get_tax_classes() {
 		$tax_classes = WC_Tax::get_tax_classes();
-
 		$this->assertEquals( $tax_classes, array( 'Reduced rate', 'Zero rate' ) );
+
+		$tax_classes = WC_Tax::get_tax_class_slugs();
+		$this->assertEquals( $tax_classes, array( 'reduced-rate', 'zero-rate' ) );
 	}
 
 	/**

@@ -231,7 +231,6 @@
 	text-transform: none;
 	line-height: 1;
 	-webkit-font-smoothing: antialiased;
-	margin-right: 0.618em;
 	content: $glyph;
 	text-decoration: none;
 }
@@ -260,7 +259,7 @@
 		margin-left: -0.5em;
 		margin-top: -0.5em;
 		content: '';
-		@include animation( spin 1s ease-in-out infinite );
+		animation: spin 1s ease-in-out infinite;
 		background: url('../images/icons/loader.svg') center center;
 		background-size: cover;
 		line-height: 1;

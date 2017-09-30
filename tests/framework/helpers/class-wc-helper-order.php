@@ -31,7 +31,7 @@ class WC_Helper_Order {
 	 * Create a order.
 	 *
 	 * @since   2.4
-	 * @version 2.7 New parameter $product.
+	 * @version 3.0 New parameter $product.
 	 *
 	 * @param int        $customer_id
 	 * @param WC_Product $product
@@ -57,7 +57,15 @@ class WC_Helper_Order {
 		$order 					= wc_create_order( $order_data );
 
 		// Add order products
-		$order->add_product( $product, 4 );
+		$item = new WC_Order_Item_Product();
+		$item->set_props( array(
+			'product'  => $product,
+			'quantity' => 4,
+			'subtotal' => wc_get_price_excluding_tax( $product, array( 'qty' => 4 ) ),
+			'total'    => wc_get_price_excluding_tax( $product, array( 'qty' => 4 ) ),
+		) );
+		$item->save();
+		$order->add_item( $item );
 
 		// Set billing address
 		$order->set_billing_first_name( 'Jeroen' );
@@ -81,8 +89,10 @@ class WC_Helper_Order {
 			'method_id'    => $rate->id,
 			'total'        => wc_format_decimal( $rate->cost ),
 			'taxes'        => $rate->taxes,
-			'meta_data'    => $rate->get_meta_data(),
 		) );
+		foreach ( $rate->get_meta_data() as $key => $value ) {
+			$item->add_meta_data( $key, $value, true );
+		}
 		$order->add_item( $item );
 
 		// Set payment gateway
@@ -95,7 +105,7 @@ class WC_Helper_Order {
 		$order->set_discount_tax( 0 );
 		$order->set_cart_tax( 0 );
 		$order->set_shipping_tax( 0 );
-		$order->set_total( 40 ); // 4 x $10 simple helper product
+		$order->set_total( 50 ); // 4 x $10 simple helper product
 		$order->save();
 
 		return $order;
