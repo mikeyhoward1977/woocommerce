@@ -38,7 +38,12 @@ final class WC_Cart_Session {
 		}
 
 		$this->cart = $cart;
+	}
 
+	/**
+	 * Register methods for this object on the appropriate WordPress hooks.
+	 */
+	public function init() {
 		add_action( 'wp_loaded', array( $this, 'get_cart_from_session' ) );
 		add_action( 'woocommerce_cart_emptied', array( $this, 'destroy_cart_session' ) );
 		add_action( 'wp', array( $this, 'maybe_set_cart_cookies' ), 99 );
@@ -66,11 +71,20 @@ final class WC_Cart_Session {
 		$this->cart->set_coupon_discount_tax_totals( WC()->session->get( 'coupon_discount_tax_totals', array() ) );
 		$this->cart->set_removed_cart_contents( WC()->session->get( 'removed_cart_contents', array() ) );
 
-		if ( is_null( $cart ) && ( $saved_cart = get_user_meta( get_current_user_id(), '_woocommerce_persistent_cart_' . get_current_blog_id(), true ) ) ) {
+		if ( apply_filters( 'woocommerce_persistent_cart_enabled', true ) ) {
+			$saved_cart = get_user_meta( get_current_user_id(), '_woocommerce_persistent_cart_' . get_current_blog_id(), true );
+		} else {
+			$saved_cart = false;
+		}
+
+		if ( is_null( $cart ) && $saved_cart ) {
 			$cart                = $saved_cart['cart'];
 			$update_cart_session = true;
 		} elseif ( is_null( $cart ) ) {
 			$cart = array();
+		} elseif ( is_array( $cart ) && $saved_cart ) {
+			$cart                = array_merge( $saved_cart['cart'], $cart );
+			$update_cart_session = true;
 		}
 
 		if ( is_array( $cart ) ) {
@@ -92,7 +106,9 @@ final class WC_Cart_Session {
 
 					} else {
 						// Put session data into array. Run through filter so other plugins can load their own session data.
-						$session_data          = array_merge( $values, array( 'data' => $product ) );
+						$session_data          = array_merge( $values, array(
+							'data' => $product,
+						) );
 						$cart_contents[ $key ] = apply_filters( 'woocommerce_get_cart_item_from_session', $session_data, $values, $key );
 
 						// Add to cart right away so the product is visible in woocommerce_get_cart_item_from_session hook.
@@ -104,7 +120,7 @@ final class WC_Cart_Session {
 
 		do_action( 'woocommerce_cart_loaded_from_session', $this->cart );
 
-		if ( $update_cart_session || is_null( $totals ) ) {
+		if ( $update_cart_session || is_null( WC()->session->get( 'cart_totals', null ) ) ) {
 			WC()->session->set( 'cart', $this->get_cart_for_session() );
 			$this->cart->calculate_totals();
 		}
@@ -174,8 +190,10 @@ final class WC_Cart_Session {
 	 * Save the persistent cart when the cart is updated.
 	 */
 	public function persistent_cart_update() {
-		if ( get_current_user_id() ) {
-			update_user_meta( get_current_user_id(), '_woocommerce_persistent_cart_' . get_current_blog_id(), array( 'cart' => $this->get_cart_for_session() ) );
+		if ( get_current_user_id() && apply_filters( 'woocommerce_persistent_cart_enabled', true ) ) {
+			update_user_meta( get_current_user_id(), '_woocommerce_persistent_cart_' . get_current_blog_id(), array(
+				'cart' => $this->get_cart_for_session(),
+			) );
 		}
 	}
 
@@ -183,7 +201,7 @@ final class WC_Cart_Session {
 	 * Delete the persistent cart permanently.
 	 */
 	public function persistent_cart_destroy() {
-		if ( get_current_user_id() ) {
+		if ( get_current_user_id() && apply_filters( 'woocommerce_persistent_cart_enabled', true ) ) {
 			delete_user_meta( get_current_user_id(), '_woocommerce_persistent_cart_' . get_current_blog_id() );
 		}
 	}

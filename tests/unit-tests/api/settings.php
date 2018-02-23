@@ -165,32 +165,6 @@ class Settings extends WC_REST_Unit_Test_Case {
 		$response = $this->server->dispatch( new WP_REST_Request( 'GET', '/wc/v2/settings/invalid' ) );
 		$this->assertEquals( 404, $response->get_status() );
 
-		// test getting a valid group
-		$response = $this->server->dispatch( new WP_REST_Request( 'GET', '/wc/v2/settings/general' ) );
-		$data = $response->get_data();
-
-		$this->assertEquals( 200, $response->get_status() );
-		$this->assertContains( array(
-    		'id' => 'woocommerce_demo_store',
-			'label' => 'Store notice',
-			'description' => 'Enable site-wide store notice text',
-			'type' => 'checkbox',
-			'default' => 'no',
-			'value' => 'no',
-			'_links' => array(
-				'self' => array(
-					array(
-						'href' => rest_url( '/wc/v2/settings/general/woocommerce_demo_store' ),
-					),
-				),
-				'collection' => array(
-					array(
-						'href' => rest_url( '/wc/v2/settings/general' ),
-					),
-				),
-			),
-		), $data );
-
 		// test getting a valid group with settings attached to it
 		$response = $this->server->dispatch( new WP_REST_Request( 'GET', '/wc/v2/settings/test' ) );
 		$data = $response->get_data();
@@ -695,44 +669,6 @@ class Settings extends WC_REST_Unit_Test_Case {
 		$response = $this->server->dispatch( $request );
 		$setting  = $response->get_data();
 		$this->assertEquals( 'lbs', $setting['value'] );
-	}
-
-	/**
-	 * Test validation of image_width.
-	 *
-	 * @since 3.0.0
-	 */
-	public function test_validation_image_width() {
-		wp_set_current_user( $this->user );
-
-		$response = $this->server->dispatch( new WP_REST_Request( 'GET', sprintf( '/wc/v2/settings/%s/%s', 'products', 'shop_thumbnail_image_size' ) ) );
-		$setting  = $response->get_data();
-		$this->assertEquals( array( 'width' => 180, 'height' => 180, 'crop' => true ), $setting['value'] );
-
-		// test bogus
-		$request = new WP_REST_Request( 'PUT', sprintf( '/wc/v2/settings/%s/%s', 'products', 'shop_thumbnail_image_size' ) );
-		$request->set_body_params( array(
-			'value' => array(
-				'width'  => 400,
-				'height' => 200,
-				'crop'   => 'asdasdasd',
-			),
-		) );
-		$response = $this->server->dispatch( $request );
-		$setting  = $response->get_data();
-		$this->assertEquals( array( 'width' => 400, 'height' => 200, 'crop' => true ), $setting['value'] );
-
-		$request = new WP_REST_Request( 'PUT', sprintf( '/wc/v2/settings/%s/%s', 'products', 'shop_thumbnail_image_size' ) );
-		$request->set_body_params( array(
-			'value' => array(
-				'width'  => 200,
-				'height' => 100,
-				'crop'   => false,
-			),
-		) );
-		$response = $this->server->dispatch( $request );
-		$setting  = $response->get_data();
-		$this->assertEquals( array( 'width' => 200, 'height' => 100, 'crop' => false ), $setting['value'] );
 	}
 
 	/**

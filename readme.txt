@@ -1,9 +1,9 @@
 === WooCommerce ===
-Contributors: automattic, mikejolley, jameskoster, claudiosanches, jshreve, coderkevin, claudiulodro, woothemes, iCaleb
+Contributors: automattic, mikejolley, jameskoster, claudiosanches, claudiulodro, kloon, rodrigosprimo, jshreve, coderkevin
 Tags: ecommerce, e-commerce, store, sales, sell, shop, cart, checkout, downloadable, downloads, paypal, storefront, woo commerce
-Requires at least: 4.4
-Tested up to: 4.8
-Stable tag: 3.1.2
+Requires at least: 4.7
+Tested up to: 4.9
+Stable tag: 3.3.0
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -35,7 +35,7 @@ One of the biggest risks of using a hosted eCommerce platform is what happens to
 
 = Define your style with Storefront =
 
-[Storefront](https://wordpress.org/themes/storefront/) is a free WordPress theme available to any WooCommerce store. Along with deep WooCommerce integration, Storefront prioritizes speed and uptime while eliminating theme and plugin conflicts during major updates.
+[Storefront](https://woocommerce.com/storefront/) is a free WordPress theme available to any WooCommerce store. Along with deep WooCommerce integration, Storefront prioritizes speed and uptime while eliminating theme and plugin conflicts during major updates.
 
 Define your style even further by customizing Storefront to your liking or choosing from one of our several [Storefront child themes](https://woocommerce.com/product-category/themes/storefront-child-theme-themes/). It’s all up to you, and all open source.
 
@@ -76,7 +76,7 @@ And there’s plenty more where they came from. Visit our [extensions page](http
 
 = Join our growing community =
 
-When you download WooCommerce, you join a community of more than a million store owners, developers, and WordPress enthusiasts. We’re one of the fastest-growing open source communities online, and whether you’re a n00b or a Ninja, we’d love to have you!
+When you download WooCommerce, you join a community of more than a million store owners, developers, and WordPress enthusiasts. We're one of the fastest-growing open source communities online, and no matter your skill level we'd love to have you!
 
 If you’re interested in contributing to WooCommerce we’ve got more than 350 contributors, and there’s always room for more. Head over to the [WooCommerce GitHub Repository](https://github.com/woocommerce/woocommerce) to find out how you can pitch in.
 
@@ -91,8 +91,6 @@ And, finally, consider joining or spearheading a WooCommerce Meetup locally, mor
 * PHP version 5.2.4 or greater (PHP 5.6 or greater is recommended)
 * MySQL version 5.0 or greater (MySQL 5.6 or greater is recommended)
 * Some payment gateways require fsockopen support (for IPN access)
-* WooCommerce 2.5 requires WordPress 4.1+
-* WooCommerce 2.6 requires WordPress 4.4+
 
 Visit the [WooCommerce server requirements documentation](https://docs.woocommerce.com/document/server-requirements/) for a detailed list of server requirements.
 
@@ -112,9 +110,9 @@ Automatic updates should work like a charm; as always though, ensure you backup 
 
 If on the off-chance you do encounter issues with the shop/category pages after an update you simply need to flush the permalinks by going to WordPress > Settings > Permalinks and hitting 'save'. That should return things to normal.
 
-= Dummy data =
+= Sample data =
 
-WooCommerce comes with some dummy data you can use to see how products look; either import dummy_data.xml via the [WordPress importer](https://wordpress.org/plugins/wordpress-importer/) or use our [CSV Import Suite plugin](https://woocommerce.com/products/product-csv-import-suite/) to import dummy_data.csv and dummy_data_variations.csv.
+WooCommerce comes with some sample data you can use to see how products look; import sample_products.xml via the [WordPress importer](https://wordpress.org/plugins/wordpress-importer/). You can also use the core [CSV importer](https://docs.woocommerce.com/document/product-csv-importer-exporter/) or our [CSV Import Suite plugin](https://woocommerce.com/products/product-csv-import-suite/) to import sample_products.csv.
 
 == Frequently Asked Questions ==
 
@@ -136,7 +134,7 @@ Yes; WooCommerce will work with any theme, but may require some styling to make 
 
 = Where can I request new features, eCommerce themes and extensions? =
 
-You can vote on and request new features and extensions in our [WooIdeas board](http://ideas.woothemes.com/forums/133476-woocommerce)
+You can vote on and request new features and extensions in our [WooIdeas board](http://ideas.woocommerce.com/forums/133476-woocommerce)
 
 = Where can I report bugs or contribute to the project? =
 
@@ -161,77 +159,41 @@ Yes you can! Join in on our [GitHub repository](http://github.com/woocommerce/wo
 
 == Changelog ==
 
-= 3.2.0 - 2017-XX-XX =
-* Feature - Coupons can now be applied and removed in admin when editing unpaid orders.
-* Feature - Simplified the ability to resend order details to customers with a single "Resend Order Details" action.
-* Feature - Added store street address, city and postal code to settings for use by plugins.
-* Feature - Wrapping values in quotes now let's you use commas in the product CSV importer.
-* Feature - If a fatal error occurs, WooCommerce will catch and log it to be viewed in WC > Status > Logs.
-* Feature - Drag and drop sorting on the grouped product field to control display order.
-* Feature - Integrated selectWoo; more accessible Select2 (enhanced select boxes) in admin and on the front-end.
-* Feature - Enhanced select boxes in the shipping calculator.
-* Feature - Enhanced select boxes in layered nav "or" widget.
-* Feature - Ajaxified the product category filter on the products screen.
-* Feature - `[products]` shortcode can be used in place of other product shortcodes - one shortcode to rule them all.
-* Feature - Added option to control maximum depth of product category widget, and cleaned up widget naming.
-* Feature - Show sorting options when viewing search results. This defaults to sorting by relevance.
-* Feature - Support for the `WC tested up to` plugin header to show which extensions have been tested against updates.
-* Feature - Helper - Filters on the subscription management screen, update notifications, and support for shared licenses.
-* Tweak - Importer now supports menu_order property, adds filename based titles to imported images, and correctly sets post status of variations.
-* Tweak - Made the buyer phone number clickable in the in the order back-end.
-* Tweak - Clean up user is_paying_customer after deleting an order.
-* Tweak - If stock changes between page load and editing, reject stock changes to avoid incorrect stock changes.
-* Tweak - Disable search engines indexing core, dynamic, cart/checkout pages.
-* Tweak - Added shortcodes to description output in structured data, and improved variable product data.
-* Tweak - Use AJAX when restoring an item in the cart, and removing an item from the mini-cart.
-* Tweak - On-boarding: added "next" button to pointers and allowed them to be dismissed.
-* Tweak - Display post states for WC pages e.g. shop, checkout etc.
-* Tweak - Improved order tracking page display and validation.
-* Tweak - Wizard improvements, with store-owner newsletter sign-up.
-* Tweak - Improved tax calculations on negative fees by apportioning to all items.
-* Tweak - Added logic to install the plugins and themes asynchronously without using wp-cron.
-* Tweak - Modify product API returned data by context.
-* Tweak - Move js clipboards off of zeroclipboard script.
-* Tweak - Remove spam trap field from registration form.
-* Tweak - Added screen reader text to quantity input template.
-* Fix - Improved error handling in the CSV importer when invalid files are uploaded.
-* Fix - Handle full refunds in tax report by date.
-* Fix - API - Return empty result when there is no on_sale products.
-* Fix - Fixed WC_Emails::wrap_message hooks .
-* Fix - Load up gateways on ajax order status transitions so PayPal funds capture when order is completed.
-* Fix - Replace wistia videos with youtube.
-* Fix - Handle sale dates on the fly in case of missed cron schedule. 
-* Fix - If sorting by date in the REST API, fallback to ID so searches are consistant.
-* Fix - Do not apply custom sorting to product feeds. 
-* Fix - Make importer columns case-insensitive.
-* Dev - Make parse_date_for_wp_query public.
-* Dev - API - Creating webhooks uses the current API version rather than the latest API version.
-* Dev - Product CRUD search helpers. 
-* Dev - Refactor shipping rate to include instance IDs, and pass instance IDs through filters.
-* Dev - New attribute helper functions.
-* Dev - Order note helper functions.
-* Dev - Added the "Terms and conditions" page to the api system status report.
-* Dev - Made date inputs reusable.
-* Dev - Added option for merging when using 'Order Again' via filter `woocommerce_empty_cart_when_order_again`.
-* Dev - Added system status tool for re-populating order address search indexes. 
-* Dev - Added system status tool for clearing webhook logs.
-* Dev - Added woocommerce_get_asset_url filter.
-* Dev - Show notice when internal meta props are accessed directly.
-* Dev - Improve meta data updates so data is only updated when changed.
-* Dev - Improved get_filtered_term_product_counts performance.
-* Dev - Introduced wc_get_account_orders_actions function.
-* Dev - `wc_get_account_formatted_address` can get address by customer ID.
-* Dev - Added `woocommerce_get_product_id_by_sku` filter.
-* Dev - Refactored cart to use new WC_Cart_Session/WC_Cart_Totals/WC_Cart_Fees/WC_Discounts classes.
-* Dev - New `WC_Shortcode_Products` class to handle all product based shortcodes.
-* Theming - Display downloads in their own table, universally, using a new template file.
-* Theming - Checkout: Order pay template 
-* Localization - Added cantons of Switzerland.
-* Localization - Updated XAF and XOF currency codes.
-* Localization - Added rtl support for activation.css.
-* Localization - Updated Mexican states to use correct 2 letter codes.
-* Localization - Improved many strings by excluding HTML.
-* Many smaller fixes and improvements - see GitHub!
+= 3.4.0 - 2018-XX-XX =
+* Feature - Added a new order widget to the dashboard (on multisite) so you can see your orders across multiple stores on the same WordPress network. #17598
+* Feature - Added "display name" input on the My Account page. #19078
+* Tweak - Made the system status tool which purges user carts also purge persistent carts.
+* Tweak - Fixed settings table styling on mobile.
+* Tweak - Don't call WC_Install::install() on downgrades.
+* Tweak - Added a function to return a list of custom tables to aid with cleanup.
+* Tweak - Display whether or not external object cache is enabled in system status report.
+* Tweak - Standardize stock update messages in admin and correctly log who performed the action. When an order note is added after modifying stock manually, update order notes display via AJAX.
+* Tweak - Added a santization function for flat rate costs to remove currency symbols.
+* Tweak - Display zero value when using shipping classes.
+* Tweak - Updated Flexslider to version 2.7.0.
+* Tweak - Make sure terms page exists and isn’t trashed before using it.
+* Tweak - Hash customer email address in download URLs to protect privacy.
+* Fix - Properly set orderby and order when calling WC_Customer_Download_Data_Store::get_downloads().
+* Fix - Set maxlength for order item meta key to avoid values disapearing if too long.
+* Fix - Remove hardcoded /wp-content check for downloads.
+* Fix - Prevent shortcode [product_page] redirecting to the actual product's page after add to cart.
+* Fix - Make the "main term" logic match for both the breadcrumb and product categories widget.
+* Fix - Check parent status too when seeing if variation is purchasable.
+* Fix - Made get_on_sale_products respect the setting to hide outofstock products.
+* Dev - Gallery meta box is now powered by CRUD.
+* Dev - Added support for additional HTML5 input types for settings/checkout forms.
+* Dev - Made 'woocommerce_email_downloads_column_' hook format aware.
+* Dev - Added extra params to `woocommerce_order_get_downloadable_items`.
+* Dev - Allow default value for single_select_country and multi_select_countries.
+* Dev - Added CSS classname to grouped product table.
+* Dev - Mini cart item link now respects value of $product_permalink.
+* Dev - Add missing `woocommerce_update_options__` actions for settings pages that override save method.
+* Dev - Added `woocommerce_persistent_cart_enabled` filter.
+* Dev - Refactor woocommerce_wp_select so it could be used for a multiselect.
+* Dev - Added ability to declare sanitize_callback in settings API.
+* Template - Update cart coupon button from input to button type.
+* Performance - Optimized saving of orders. Adds a transient for needs_processing, and only saves changes when saving order items.
+* Localization - Various spelling and grammar fixes.
 
 [See changelog for all versions](https://raw.githubusercontent.com/woocommerce/woocommerce/master/CHANGELOG.txt).
 

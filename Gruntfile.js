@@ -199,6 +199,7 @@ module.exports = function( grunt ) {
 					potFilename: 'woocommerce.pot',
 					exclude: [
 						'apigen/.*',
+						'vendor/.*',
 						'tests/.*',
 						'tmp/.*'
 					]
@@ -229,12 +230,13 @@ module.exports = function( grunt ) {
 			},
 			files: {
 				src:  [
-					'**/*.php',         // Include all files
-					'!apigen/**',       // Exclude apigen/
-					'!node_modules/**', // Exclude node_modules/
-					'!tests/**',        // Exclude tests/
-					'!vendor/**',       // Exclude vendor/
-					'!tmp/**'           // Exclude tmp/
+					'**/*.php',               // Include all files
+					'!apigen/**',             // Exclude apigen/
+					'!includes/libraries/**', // Exclude libraries/
+					'!node_modules/**',       // Exclude node_modules/
+					'!tests/**',              // Exclude tests/
+					'!vendor/**',             // Exclude vendor/
+					'!tmp/**'                 // Exclude tmp/
 				],
 				expand: true
 			}
@@ -246,9 +248,9 @@ module.exports = function( grunt ) {
 				stdout: true,
 				stderr: true
 			},
-			apigen: {
+			apidocs: {
 				command: [
-					'apigen generate -q',
+					'vendor/bin/apigen generate -q',
 					'cd apigen',
 					'php hook-docs.php'
 				].join( '&&' )
@@ -258,12 +260,15 @@ module.exports = function( grunt ) {
 			},
 			e2e_tests: {
 				command: 'npm run --silent test'
+			},
+			e2e_tests_grep: {
+				command: 'npm run --silent test:grep "' + grunt.option( 'grep' ) + '"'
 			}
 		},
 
 		// Clean the directory.
 		clean: {
-			apigen: {
+			apidocs: {
 				src: [ 'wc-apidocs' ]
 			}
 		},
@@ -271,12 +276,9 @@ module.exports = function( grunt ) {
 		// PHP Code Sniffer.
 		phpcs: {
 			options: {
-				bin: 'vendor/bin/phpcs',
+				bin: 'vendor/bin/phpcs'
 			},
 			dist: {
-				options: {
-					standard: './phpcs.ruleset.xml'
-				},
 				src:  [
 					'**/*.php',                                                  // Include all files
 					'!apigen/**',                                                // Exclude apigen/
@@ -330,9 +332,9 @@ module.exports = function( grunt ) {
 
 	// Register tasks
 	grunt.registerTask( 'default', [
-		'jshint',
-		'uglify',
-		'css'
+		'js',
+		'css',
+		'i18n'
 	]);
 
 	grunt.registerTask( 'js', [
@@ -350,17 +352,26 @@ module.exports = function( grunt ) {
 	]);
 
 	grunt.registerTask( 'docs', [
-		'clean:apigen',
-		'shell:apigen'
+		'clean:apidocs',
+		'shell:apidocs'
 	]);
 
+	// Only an alias to 'default' task.
 	grunt.registerTask( 'dev', [
-		'default',
+		'default'
+	]);
+
+	grunt.registerTask( 'i18n', [
+		'checktextdomain',
 		'makepot'
 	]);
 
 	grunt.registerTask( 'e2e-tests', [
 		'shell:e2e_tests'
+	]);
+
+	grunt.registerTask( 'e2e-tests-grep', [
+		'shell:e2e_tests_grep'
 	]);
 
 	grunt.registerTask( 'e2e-test', [

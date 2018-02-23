@@ -59,7 +59,7 @@ class WC_AJAX {
 		@header( 'Content-Type: text/html; charset=' . get_option( 'blog_charset' ) );
 		@header( 'X-Robots-Tag: noindex' );
 		send_nosniff_header();
-		nocache_headers();
+		wc_nocache_headers();
 		status_header( 200 );
 	}
 
@@ -99,6 +99,7 @@ class WC_AJAX {
 			'get_customer_location'                            => true,
 			'feature_product'                                  => false,
 			'mark_order_status'                                => false,
+			'get_order_details'                                => false,
 			'add_attribute'                                    => false,
 			'add_new_attribute'                                => false,
 			'remove_variation'                                 => false,
@@ -359,11 +360,20 @@ class WC_AJAX {
 		ob_start();
 
 		$product_id        = apply_filters( 'woocommerce_add_to_cart_product_id', absint( $_POST['product_id'] ) );
+		$product           = wc_get_product( $product_id );
 		$quantity          = empty( $_POST['quantity'] ) ? 1 : wc_stock_amount( $_POST['quantity'] );
 		$passed_validation = apply_filters( 'woocommerce_add_to_cart_validation', true, $product_id, $quantity );
 		$product_status    = get_post_status( $product_id );
+		$variation_id      = 0;
+		$variation         = array();
 
-		if ( $passed_validation && false !== WC()->cart->add_to_cart( $product_id, $quantity ) && 'publish' === $product_status ) {
+		if ( $product && 'variation' === $product->get_type() ) {
+			$variation_id = $product_id;
+			$product_id   = $product->get_parent_id();
+			$variation    = $product->get_variation_attributes();
+		}
+
+		if ( $passed_validation && false !== WC()->cart->add_to_cart( $product_id, $quantity, $variation_id, $variation ) && 'publish' === $product_status ) {
 
 			do_action( 'woocommerce_ajax_added_to_cart', $product_id );
 
@@ -387,7 +397,7 @@ class WC_AJAX {
 	}
 
 	/**
-	 * AJAX add to cart.
+	 * AJAX remove from cart.
 	 */
 	public static function remove_from_cart() {
 		ob_start();
@@ -469,6 +479,26 @@ class WC_AJAX {
 		}
 
 		wp_safe_redirect( wp_get_referer() ? wp_get_referer() : admin_url( 'edit.php?post_type=shop_order' ) );
+		exit;
+	}
+
+	/**
+	 * Get order details.
+	 */
+	public static function get_order_details() {
+		check_admin_referer( 'woocommerce-preview-order', 'security' );
+
+		if ( ! current_user_can( 'edit_shop_orders' ) ) {
+			wp_die( -1 );
+		}
+
+		$order = wc_get_order( absint( $_GET['order_id'] ) ); // WPCS: sanitization ok.
+
+		if ( $order ) {
+			include_once( 'admin/list-tables/class-wc-admin-list-table-orders.php' );
+
+			wp_send_json_success( WC_Admin_List_Table_Orders::order_preview_get_order_details( $order ) );
+		}
 		exit;
 	}
 
@@ -580,14 +610,13 @@ class WC_AJAX {
 	 * Add variation via ajax function.
 	 */
 	public static function add_variation() {
-
 		check_ajax_referer( 'add-variation', 'security' );
 
 		if ( ! current_user_can( 'edit_products' ) ) {
 			wp_die( -1 );
 		}
 
-		global $post; // Set $post global so its available, like within the admin screens
+		global $post; // Set $post global so its available, like within the admin screens.
 
 		$product_id       = intval( $_POST['post_id'] );
 		$post             = get_post( $product_id );
@@ -595,6 +624,7 @@ class WC_AJAX {
 		$product_object   = wc_get_product( $product_id );
 		$variation_object = new WC_Product_Variation();
 		$variation_object->set_parent_id( $product_id );
+		$variation_object->set_attributes( array_fill_keys( array_map( 'sanitize_title', array_keys( $product_object->get_variation_attributes() ) ), '' ) );
 		$variation_id     = $variation_object->save();
 		$variation        = get_post( $variation_id );
 		$variation_data   = array_merge( array_map( 'maybe_unserialize', get_post_custom( $variation_id ) ), wc_get_product_variation_attributes( $variation_id ) ); // kept for BW compatibility.
@@ -773,9 +803,18 @@ class WC_AJAX {
 			$order_id     = absint( $_POST['order_id'] );
 			$order        = wc_get_order( $order_id );
 			$items_to_add = wp_parse_id_list( is_array( $_POST['item_to_add'] ) ? $_POST['item_to_add'] : array( $_POST['item_to_add'] ) );
+			$items        = ( ! empty( $_POST['items'] ) ) ? $_POST['items'] : '';
 
 			if ( ! $order ) {
 				throw new Exception( __( 'Invalid order', 'woocommerce' ) );
+			}
+
+			// If we passed through items it means we need to save first before adding a new one.
+			if ( ! empty( $items ) ) {
+				$save_items = array();
+				parse_str( $items, $save_items );
+				// Save order items.
+				wc_save_order_items( $order->get_id(), $save_items );
 			}
 
 			foreach ( $items_to_add as $item_to_add ) {
@@ -812,9 +851,15 @@ class WC_AJAX {
 		}
 
 		try {
-			$order_id = absint( $_POST['order_id'] );
-			$amount   = wc_clean( $_POST['amount'] );
-			$order    = wc_get_order( $order_id );
+			$order_id           = absint( $_POST['order_id'] );
+			$amount             = wc_clean( $_POST['amount'] );
+			$order              = wc_get_order( $order_id );
+			$calculate_tax_args = array(
+				'country'  => strtoupper( wc_clean( $_POST['country'] ) ),
+				'state'    => strtoupper( wc_clean( $_POST['state'] ) ),
+				'postcode' => strtoupper( wc_clean( $_POST['postcode'] ) ),
+				'city'     => strtoupper( wc_clean( $_POST['city'] ) ),
+			);
 
 			if ( ! $order ) {
 				throw new exception( __( 'Invalid order', 'woocommerce' ) );
@@ -835,7 +880,8 @@ class WC_AJAX {
 			$fee->set_name( sprintf( __( '%s fee', 'woocommerce' ), $formatted_amount ) );
 
 			$order->add_item( $fee );
-			$order->calculate_totals( true );
+			$order->calculate_taxes( $calculate_tax_args );
+			$order->calculate_totals( false );
 			$order->save();
 
 			ob_start();
@@ -983,11 +1029,26 @@ class WC_AJAX {
 		}
 
 		try {
-			$order_id       = absint( $_POST['order_id'] );
-			$order_item_ids = $_POST['order_item_ids'];
+			$order_id           = absint( $_POST['order_id'] );
+			$order_item_ids     = $_POST['order_item_ids'];
+			$items              = ( ! empty( $_POST['items'] ) ) ? $_POST['items']: '';
+			$calculate_tax_args = array(
+				'country'  => strtoupper( wc_clean( $_POST['country'] ) ),
+				'state'    => strtoupper( wc_clean( $_POST['state'] ) ),
+				'postcode' => strtoupper( wc_clean( $_POST['postcode'] ) ),
+				'city'     => strtoupper( wc_clean( $_POST['city'] ) ),
+			);
 
 			if ( ! is_array( $order_item_ids ) && is_numeric( $order_item_ids ) ) {
 				$order_item_ids = array( $order_item_ids );
+			}
+
+			// If we passed through items it means we need to save first before deleting.
+			if ( ! empty( $items ) ) {
+				$save_items = array();
+				parse_str( $items, $save_items );
+				// Save order items
+				wc_save_order_items( $order_id, $save_items );
 			}
 
 			if ( sizeof( $order_item_ids ) > 0 ) {
@@ -997,7 +1058,8 @@ class WC_AJAX {
 			}
 
 			$order = wc_get_order( $order_id );
-			$order->calculate_totals( true );
+			$order->calculate_taxes( $calculate_tax_args );
+			$order->calculate_totals( false );
 
 			ob_start();
 			include( 'admin/meta-boxes/views/html-order-items.php' );
@@ -1064,19 +1126,25 @@ class WC_AJAX {
 				if ( $_product && $_product->exists() && $_product->managing_stock() && isset( $order_item_qty[ $item_id ] ) && $order_item_qty[ $item_id ] > 0 ) {
 					$stock_change = apply_filters( 'woocommerce_reduce_order_stock_quantity', $order_item_qty[ $item_id ], $item_id );
 					$new_stock    = wc_update_product_stock( $_product, $stock_change, 'decrease' );
-					$item_name    = $_product->get_sku() ? $_product->get_sku() : $_product->get_id();
-					$note         = sprintf( __( 'Item %1$s stock reduced from %2$s to %3$s.', 'woocommerce' ), $item_name, $new_stock + $stock_change, $new_stock );
-					$return[]     = $note;
-					$order->add_order_note( $note );
+					$item_name    = $_product->get_formatted_name();
+					$return[]     = array(
+						'note'    => sprintf( wp_kses_post( __( '%1$s stock reduced from %2$s to %3$s.', 'woocommerce' ) ), $item_name, $new_stock + $stock_change, $new_stock ),
+						'success' => true,
+					);
 				}
 			}
 			do_action( 'woocommerce_reduce_order_stock', $order );
+
 			if ( empty( $return ) ) {
-				$return[] = __( 'No products had their stock reduced - they may not have stock management enabled.', 'woocommerce' );
+				$return[] = array(
+					'note'    => wp_kses_post( __( 'No products had their stock reduced - they may not have stock management enabled.', 'woocommerce' ) ),
+					'success' => false,
+				);
 			}
-			echo wp_kses_post( implode( ', ', $return ) );
+
+			wp_send_json_success( $return );
 		}
-		wp_die();
+		wp_send_json_error();
 	}
 
 	/**
@@ -1104,19 +1172,24 @@ class WC_AJAX {
 					$old_stock    = $_product->get_stock_quantity();
 					$stock_change = apply_filters( 'woocommerce_restore_order_stock_quantity', $order_item_qty[ $item_id ], $item_id );
 					$new_quantity = wc_update_product_stock( $_product, $stock_change, 'increase' );
-					$item_name    = $_product->get_sku() ? $_product->get_sku() : $_product->get_id();
-					$note         = sprintf( __( 'Item %1$s stock increased from %2$s to %3$s.', 'woocommerce' ), $item_name, $old_stock, $new_quantity );
-					$return[]     = $note;
-					$order->add_order_note( $note );
+					$item_name    = $_product->get_formatted_name();
+					$return[]     = array(
+						'note'    => sprintf( wp_kses_post( __( '%1$s stock increased from %2$s to %3$s.', 'woocommerce' ) ), $item_name, $old_stock, $new_quantity ),
+						'success' => true,
+					);
 				}
 			}
 			do_action( 'woocommerce_restore_order_stock', $order );
 			if ( empty( $return ) ) {
-				$return[] = __( 'No products had their stock increased - they may not have stock management enabled.', 'woocommerce' );
+				$return[] = array(
+					'note'    => wp_kses_post( __( 'No products had their stock increased - they may not have stock management enabled.', 'woocommerce' ) ),
+					'success' => false,
+				);
 			}
-			echo wp_kses_post( implode( ', ', $return ) );
+
+			wp_send_json_success( $return );
 		}
-		wp_die();
+		wp_send_json_error();
 	}
 
 	/**
@@ -1215,15 +1288,30 @@ class WC_AJAX {
 		if ( $post_id > 0 ) {
 			$order      = wc_get_order( $post_id );
 			$comment_id = $order->add_order_note( $note, $is_customer_note, true );
+			$note       = wc_get_order_note( $comment_id );
 
-			echo '<li rel="' . esc_attr( $comment_id ) . '" class="note ';
-			if ( $is_customer_note ) {
-				echo 'customer-note';
-			}
-			echo '"><div class="note_content">';
-			echo wpautop( wptexturize( $note ) );
-			echo '</div><p class="meta"><a href="#" class="delete_note">' . __( 'Delete note', 'woocommerce' ) . '</a></p>';
-			echo '</li>';
+			$note_classes   = array( 'note' );
+			$note_classes[] = $is_customer_note ? 'customer-note' : '';
+			$note_classes   = apply_filters( 'woocommerce_order_note_class', array_filter( $note_classes ), $note );
+			?>
+			<li rel="<?php echo absint( $note->id ); ?>" class="<?php echo esc_attr( implode( ' ', $note_classes ) ); ?>">
+				<div class="note_content">
+					<?php echo wpautop( wptexturize( wp_kses_post( $note->content ) ) ); ?>
+				</div>
+				<p class="meta">
+					<abbr class="exact-date" title="<?php echo $note->date_created->date( 'y-m-d h:i:s' ); ?>">
+						<?php printf( __( 'added on %1$s at %2$s', 'woocommerce' ), $note->date_created->date_i18n( wc_date_format() ), $note->date_created->date_i18n( wc_time_format() ) ); ?>
+					</abbr>
+					<?php
+					if ( 'system' !== $note->added_by ) :
+						/* translators: %s: note author */
+						printf( ' ' . __( 'by %s', 'woocommerce' ), $note->added_by );
+					endif;
+					?>
+					<a href="#" class="delete_note" role="button"><?php _e( 'Delete note', 'woocommerce' ); ?></a>
+				</p>
+			</li>
+			<?php
 		}
 		wp_die();
 	}
@@ -1349,17 +1437,19 @@ class WC_AJAX {
 			wp_die();
 		}
 
+		$ids = array();
 		// Search by ID.
 		if ( is_numeric( $term ) ) {
 			$customer = new WC_Customer( intval( $term ) );
 
 			// Customer does not exists.
-			if ( 0 === $customer->get_id() ) {
-				wp_die();
+			if ( 0 !== $customer->get_id() ) {
+				$ids = array( $customer->get_id() );
 			}
+		}
 
-			$ids = array( $customer->get_id() );
-		} else {
+		// Usernames can be numeric so we first check that no users was found by ID before searching for numeric username, this prevents performance issues with ID lookups.
+		if ( empty( $ids ) ) {
 			$data_store = WC_Data_Store::load( 'customer' );
 
 			// If search is smaller than 3 characters, limit result set to avoid
@@ -1596,9 +1686,6 @@ class WC_AJAX {
 			wp_send_json_success( $response_data );
 
 		} catch ( Exception $e ) {
-			if ( $refund && is_a( $refund, 'WC_Order_Refund' ) ) {
-				wp_delete_post( $refund->get_id(), true );
-			}
 			wp_send_json_error( array( 'error' => $e->getMessage() ) );
 		}
 	}
@@ -1898,6 +1985,17 @@ class WC_AJAX {
 	 */
 	private static function variation_bulk_action_variable_stock_status_outofstock( $variations, $data ) {
 		self::variation_bulk_set( $variations, 'stock_status', 'outofstock' );
+	}
+
+	/**
+	 * Bulk action - Set Stock Status as On Backorder.
+	 * @access private
+	 * @used-by bulk_edit_variations
+	 * @param  array $variations
+	 * @param  array $data
+	 */
+	private static function variation_bulk_action_variable_stock_status_onbackorder( $variations, $data ) {
+		self::variation_bulk_set( $variations, 'stock_status', 'onbackorder' );
 	}
 
 	/**
@@ -2241,18 +2339,15 @@ class WC_AJAX {
 				'tax_rate_order'    => 1,
 			) );
 
-			// Format the rate.
-			$tax_rate['tax_rate'] = wc_format_decimal( $tax_rate['tax_rate'] );
+			if ( isset( $tax_rate['tax_rate'] ) ) {
+				$tax_rate['tax_rate'] = wc_format_decimal( $tax_rate['tax_rate'] );
+			}
 
 			if ( isset( $data['newRow'] ) ) {
-				// Hurrah, shiny and new!
 				$tax_rate['tax_rate_class'] = $current_class;
-				$tax_rate_id = WC_Tax::_insert_tax_rate( $tax_rate );
-			} else {
-				// Updating an existing rate ...
-				if ( ! empty( $tax_rate ) ) {
-					WC_Tax::_update_tax_rate( $tax_rate_id, $tax_rate );
-				}
+				$tax_rate_id                = WC_Tax::_insert_tax_rate( $tax_rate );
+			} elseif ( ! empty( $tax_rate ) ) {
+				WC_Tax::_update_tax_rate( $tax_rate_id, $tax_rate );
 			}
 
 			if ( isset( $data['postcode'] ) ) {
@@ -2264,6 +2359,9 @@ class WC_AJAX {
 				WC_Tax::_update_tax_rate_cities( $tax_rate_id, array_map( 'wc_clean', $data['city'] ) );
 			}
 		}
+
+		WC_Cache_Helper::incr_cache_prefix( 'taxes' );
+		WC_Cache_Helper::get_transient_version( 'shipping', true );
 
 		wp_send_json_success( array(
 			'rates' => WC_Tax::get_rates_for_tax_class( $current_class ),
@@ -2351,7 +2449,7 @@ class WC_AJAX {
 			'instance_id' => $instance_id,
 			'zone_id'     => $zone->get_id(),
 			'zone_name'   => $zone->get_zone_name(),
-			'methods'     => $zone->get_shipping_methods(),
+			'methods'     => $zone->get_shipping_methods( false, 'json' ),
 		) );
 	}
 
@@ -2449,7 +2547,7 @@ class WC_AJAX {
 		wp_send_json_success( array(
 			'zone_id'   => $zone->get_id(),
 			'zone_name' => $zone->get_zone_name(),
-			'methods'   => $zone->get_shipping_methods(),
+			'methods'   => $zone->get_shipping_methods( false, 'json' ),
 		) );
 	}
 
@@ -2481,7 +2579,7 @@ class WC_AJAX {
 		wp_send_json_success( array(
 			'zone_id'   => $zone->get_id(),
 			'zone_name' => $zone->get_zone_name(),
-			'methods'   => $zone->get_shipping_methods(),
+			'methods'   => $zone->get_shipping_methods( false, 'json' ),
 			'errors'    => $shipping_method->get_errors(),
 		) );
 	}
